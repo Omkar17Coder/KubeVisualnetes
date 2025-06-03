@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List,Dict,Any ,Optional
 from kubernetes import client, config
 from kubernetes.config import ConfigException
 from kubernetes.stream import stream
@@ -103,3 +103,49 @@ def get_cluster_summary_metrics(cluster_name: str):
     except Exception as e:
         raise ValueError(f"Failed to get cluster metrics: {str(e)}")
 
+
+
+
+
+
+def load_context(cluster: str = None):
+    """Load kube config and set context."""
+    contexts, active_context = config.list_kube_config_contexts()
+    if not contexts:
+        raise RuntimeError("No Kubernetes contexts found.")
+    config.load_kube_config(context=cluster)
+
+def fetch_deployments(cluster: str) -> List[Dict[str, Any]]:
+    load_context(cluster)
+    apps_v1 = client.AppsV1Api()
+    deployments = apps_v1.list_deployment_for_all_namespaces(watch=False)
+    return [{
+        "name": d.metadata.name,
+        "namespace": d.metadata.namespace,
+        "replicas": d.spec.replicas,
+        "available_replicas": d.status.available_replicas
+    } for d in deployments.items]
+
+def fetch_replicasets(cluster: str) -> List[Dict[str, Any]]:
+    load_context(cluster)
+    apps_v1 = client.AppsV1Api()
+    replicasets = apps_v1.list_replica_set_for_all_namespaces(watch=False)
+    return [{
+        "name": r.metadata.name,
+        "namespace": r.metadata.namespace,
+        "replicas": r.spec.replicas,
+        "ready_replicas": r.status.ready_replicas
+    } for r in replicasets.items]
+
+
+
+
+
+
+
+
+
+
+
+
+ 
